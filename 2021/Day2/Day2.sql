@@ -1,7 +1,7 @@
 --DATA IMPORT
 with data as (
   select 
-     n			= row_number() over (order by (select null))
+     n			= cast(row_number() over (order by (select null)) as int)
     ,Direction	= substring(v.val, 0, len(v.val) - 1)
     ,Value		= cast(right(v.val, 1) as int)
 
