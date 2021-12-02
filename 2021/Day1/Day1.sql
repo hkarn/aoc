@@ -33,6 +33,7 @@ select value
 ,BnextValue = lead(value,2) over (order by n)
 ,CnextValue = lead(value,3) over (order by n) 
 from data
+  
 )
 select count(*) 
 from withLast 
