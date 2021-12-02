@@ -16,14 +16,15 @@ with data as (
   --example input
   , char(13)) 
   )
- 
+
+--END DATA IMPORT
  
 -- PART 1
 ,withLast as (
   select value, lastValue = lag(value,1) over (order by n) from data
-  )
-
+)
 select count(*) from withLast where value > lastValue
+
 
 -- PART 2
 ,withLast as (
@@ -33,9 +34,7 @@ select value
 ,CnextValue = lead(value,3) over (order by n) 
 from data
 )
-
-select 
-count(*) 
+select count(*) 
 from withLast 
  where CnextValue is not null
  and (value + AnextValue + BnextValue) <
