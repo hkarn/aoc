@@ -82,3 +82,31 @@ set @drawcount =  @drawcount + 1
 end
 
 select @winsum
+
+
+--PART 2
+set @drawcount = (select count(*) from #draw)
+set @winsum = null
+while @drawcount > 0
+begin
+     with wincounts as (
+    select BoardID, RowID, ColID
+    ,winrow = count(b.nr) over (partition by BoardID, RowID) 
+    ,wincol = count(b.nr) over (partition by BoardID, ColID) 
+    from #boards b
+    inner join #draw d on d.nr = b.nr
+    where d.n <= @drawcount
+    )
+
+    select @winsum = sum(b.nr) * d.nr
+    from #boards b
+    cross join (select nr = nr from #draw where n = @drawcount+1) d
+    where BoardID not in (select BoardID from wincounts where winrow >= 5 or wincol >= 5)
+    and not exists (select 1 from #draw d where d.n <= @drawcount+1 and d.nr = b.nr)
+    group by d.nr
+
+    if (isnull(@winsum,0) <> 0) set @drawcount = 0
+set @drawcount =  @drawcount - 1
+end
+
+select @winsum
