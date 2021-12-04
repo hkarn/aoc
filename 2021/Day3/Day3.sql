@@ -65,7 +65,7 @@ go
 ,convert(int,round(avg(case when dbo.BinaryToDecimalTMP(base2val) & 1 = 0 then 1.0 else 0.0 end),0))
  )
  from #data)
---if you know a way to use bitwise to flip the result instead let me know, that worked fine on a tinyint but the signed ones got me :)
+--if you know a way to use bitwise to flip the result instead let me know, that worked fine on a tinyint, but the lack of larger unisgned or longer bits in T-SQL got me :)
 
 
 select  dbo.BinaryToDecimalTMP(gr) * dbo.BinaryToDecimalTMP(er)
