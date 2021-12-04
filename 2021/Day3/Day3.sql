@@ -1,5 +1,5 @@
 if object_id('maindb2.dbo.BinaryToDecimalTMP', 'FN') is not null
-    drop function BinaryToDecimalTMP
+    drop function maindb2.dbo.BinaryToDecimalTMP
 if object_id('tempdb..#data', 'U') is not null
     drop table #data
 
@@ -105,4 +105,4 @@ cross join @resultsco2 b
 if object_id('tempdb..#data', 'U') is not null
     drop table #data
 if object_id('maindb2.dbo.BinaryToDecimalTMP', 'FN') is not null
-    drop function BinaryToDecimalTMP
+    drop function maindb2.dbo.BinaryToDecimalTMP
