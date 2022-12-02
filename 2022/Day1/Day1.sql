@@ -1,7 +1,7 @@
-
 drop table if exists #input
-CREATE TABLE #input (
-	Calories nvarchar(max)
+create table #input
+(
+  Calories nvarchar(max)
 )
 
 
@@ -19,26 +19,24 @@ WITH
 )
 
 drop table if exists #Calories
-CREATE TABLE #Calories (
-	ID int identity(1,1),
-	Calories int null,
-	ElfID int null
+create table #Calories
+(
+  ID       int identity(1, 1)
+, Calories int null
 )
 
-insert into #Calories (Calories)
-select Calories from #input
-
-declare @pointer int = (select min(ID) from #Calories)
-declare @counter int = 1
-while @pointer is not null
-	begin
-		update #Calories set ElfID = @counter where ID = @pointer
-		if(select Calories from #Calories where ID = @pointer) is null 
-			set @counter = @counter + 1
-		set @pointer = (select min(ID) from #Calories where ID > @pointer)
-	end
-
-select max(Calories) from (
-	select Calories = sum(Calories) over (partition by ElfID) from #Calories
+insert into #Calories (Calories) select Calories from #input;
+with grp
+as (select *, breakp = iif(Calories is null, ID, null)from #Calories)
+   , grouped
+as (select Calories
+         , ElfID = isnull(max(breakp) over (order by ID ROWS UNBOUNDED PRECEDING), 1) --last non null
+    from grp)
+select max(Calories)
+from
+(
+  select Calories = sum(Calories) over (partition by ElfID)
+  from grouped
 ) t
+
 
