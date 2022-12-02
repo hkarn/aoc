@@ -23,20 +23,47 @@ create table #Calories
 (
   ID       int identity(1, 1)
 , Calories int null
+, ElfID    int null
 )
 
-insert into #Calories (Calories) select Calories from #input;
-with grp
-as (select *, breakp = iif(Calories is null, ID, null)from #Calories)
-   , grouped
+-- Part 1
+insert into #Calories (Calories) 
+select Calories from #input
+
+drop table if exists #CaloriesGrouped
+;with grp
+as (select *
+		, breakp = iif(Calories is null, ID, null) --ID only where null
+	from #Calories)
+
+,grouped
 as (select Calories
-         , ElfID = isnull(max(breakp) over (order by ID ROWS UNBOUNDED PRECEDING), 1) --last non null
+         , ElfID = isnull(
+				max(breakp) over (order by ID ROWS UNBOUNDED PRECEDING) --max non-null breakp before current row
+				, 1) --first group as 1
     from grp)
+
+
+select * into #CaloriesGrouped from grouped
+
 select max(Calories)
 from
 (
   select Calories = sum(Calories) over (partition by ElfID)
-  from grouped
+  from #CaloriesGrouped
 ) t
+
+-- Part 2
+
+
+;with summed as (
+	select ElfId,CaloriesSum= sum(Calories) over (partition by ElfID)
+	from #CaloriesGrouped)
+
+,ranked as (
+select distinct CaloriesSum, [rank] = dense_rank() over (order by CaloriesSum desc) from summed
+)
+
+select sum(CaloriesSum) from ranked where [rank] <= 3
 
 
