@@ -71,9 +71,10 @@ inner join #OwnMoveScore s on s.OwnMove = i.Own
 --X means you need to lose, Y means you need to end the round in a draw and Z means you need to win.
 
 select sum(r.Score) + sum(s.Score) from #input i 
-inner join #Rules r on i.Opponent = r.OpponentMove and case i.Own when 'X' then 0
-																  when 'Y' then 3
-																  when 'Z' then 6
-																  end
-																  = r.Score
+inner join #Rules r on i.Opponent = r.OpponentMove 
+											and case i.Own 
+											when 'X' then 0
+											when 'Y' then 3
+											when 'Z' then 6
+											end = r.Score
 inner join #OwnMoveScore s on s.OwnMove = r.OwnMove
