@@ -73,7 +73,8 @@ end
 --PART 1 - answer
 select sum(n1) from (
 	select distinct a.id,a.n1 from #numberd a
-	inner join #numberd b on a.id=b.id and a.n1 = b.n2 
+	where exists (select 1 from #numberd b where a.id=b.id and a.n1 = b.n2 )
+	group by a.id,a.n1
 ) t
 
 --PART 2
@@ -90,6 +91,7 @@ select distinct a.id,a.n1 from #joinedNumbered a
 inner join #joinedNumbered b on a.grp = b.grp and a.n1 = b.n1 and a.id = b.id +1
 inner join #joinedNumbered c on a.grp = c.grp and a.n1 = c.n1 and b.id = c.id +1
 ) t
+
 
 
 go
