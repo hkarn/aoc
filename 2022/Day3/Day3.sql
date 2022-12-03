@@ -93,7 +93,6 @@ inner join #joinedNumbered c on a.grp = c.grp and a.n1 = c.n1 and b.id = c.id +1
 ) t
 
 
-
 go
 drop function if exists dbo.AOCTransform
 
