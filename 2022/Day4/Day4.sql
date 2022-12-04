@@ -116,4 +116,17 @@ from
      and a.RangeID      <> b.RangeID
 ) t
 
+--PART 2 answer
 
+select count(*)
+from
+(
+  select distinct
+         a = a.ElfPairID
+       , b = b.ElfPairID
+  from #assignments         a
+    inner join #assignments b
+      on a.ElfPairID = b.ElfPairID
+     and a.Section   = b.Section
+     and a.RangeID   <> b.RangeID
+) t
