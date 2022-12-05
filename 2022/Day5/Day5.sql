@@ -45,7 +45,7 @@ create table #Moves (
    ,ToColumnID int not null
 )
 
---get number if columns and charindex (0-9 columns)
+--get number of columns and charindex (0-9 columns)
 drop table if exists  #columnStructure
 create table #columnStructure (
 	 ColID int not null
@@ -114,7 +114,8 @@ begin
 set @Move = (select min(MoveOrder) from #Moves where MoveOrder > @Move)
 end
 
---PART 1
+--PART 1 & PART 2
+--Use flag for @CrateMover model above.
 
 select string_agg(CrateType,'') within group (order by ColumnID, RowID) from #Crates
 where RowID = 1
