@@ -6,7 +6,7 @@ create table #input_stage
 
 --extract. Unsafe order import but fine for aoc
 BULK INSERT #input_stage
-FROM 'C:\GitHub\aoc\2022\Day8\input-example.txt'
+FROM 'C:\GitHub\aoc\2022\Day8\input.txt'
 WITH
 (
   FIRSTROW = 1,
@@ -56,9 +56,10 @@ update #input set txt = dbo.AOCSepString(txt)
 drop table if exists #grid
 create table #grid
 (
-  RowID  int not null
-, ColID  int not null
-, Height int not null
+  RowID        int not null
+, ColID        int not null
+, Height       int not null
+, VisibleRange int null
     primary key (
                   RowID
                 , ColID
@@ -123,13 +124,161 @@ where rowBeforeMax is null
 
 --PART 2
 
---look left
-select *
-from #grid         a
-  inner join #grid b
-    on a.RowID = b.RowID
-   and a.ColID > b.ColID
+declare @col int =
+        (
+          select min(ColID)from #grid
+        )
+declare @row int =
+        (
+          select min(RowID)from #grid
+        )
+drop type if exists AOCrange
+go
+create type AOCrange as table
+(
+  ID     int
+, Height int
+)
+go
+drop function if exists dbo.AOCVisibleRange
+go
+create function dbo.AOCVisibleRange
+(
+  @seq AOCrange readonly
+)
+returns int
+as
+begin
+  if (select count(*)from @seq) <= 1 return 0 --break: we are at a border
+
+  declare @result int = 0
+  declare @orgHeight int =
+          (
+            select top (1) Height from @seq order by ID
+          )
+  declare @heightMatchedFlag bit = 0
+  declare @p int =
+          (
+            select min(ID)from @seq
+          )
+  set @p =
+  (
+    select min(ID)from @seq where ID > @p
+  ) --start comparison one three out
+  while @p is not null and @heightMatchedFlag = 0
+  begin
+    if @orgHeight <=
+    (
+      select Height from @seq where ID = @p
+    )
+      set @heightMatchedFlag = 1
+
+    set @result = @result + 1
+    set @p =
+    (
+      select min(ID)from @seq where ID > @p
+    )
+  end
+  return @result
+end
+go
+declare @AOCrange as AOCrange
+
+
+declare @Col int =
+        (
+          select min(ColID)from #grid
+        )
+declare @Row int
+declare @VisibleR int
+
+while @Col is not null
+begin
+  set @Row =
+  (
+    select min(RowID)from #grid where ColID = @Col
+  )
+  while @Row is not null
+  begin
+    set @VisibleR = 1
+
+    --move left
+    delete from @AOCrange
+    insert into @AOCrange
+    (
+      ID
+    , Height
+    )
+    select ID = row_number() over (order by ColID desc)
+         , Height
+    from #grid
+    where RowID = @Row
+      and ColID <= @Col
+    select @VisibleR = @VisibleR * dbo.AOCVisibleRange(@AOCrange)
+
+    --move right
+    delete from @AOCrange
+    insert into @AOCrange
+    (
+      ID
+    , Height
+    )
+    select ID = row_number() over (order by ColID asc)
+         , Height
+    from #grid
+    where RowID = @Row
+      and ColID >= @Col
+    select @VisibleR = @VisibleR * dbo.AOCVisibleRange(@AOCrange)
+
+    --move up
+    delete from @AOCrange
+    insert into @AOCrange
+    (
+      ID
+    , Height
+    )
+    select ID = row_number() over (order by RowID desc)
+         , Height
+    from #grid
+    where RowID <= @Row
+      and ColID = @Col
+    select @VisibleR = @VisibleR * dbo.AOCVisibleRange(@AOCrange)
+
+    --move down
+    delete from @AOCrange
+    insert into @AOCrange
+    (
+      ID
+    , Height
+    )
+    select ID = row_number() over (order by RowID asc)
+         , Height
+    from #grid
+    where RowID >= @Row
+      and ColID = @Col
+    select @VisibleR = @VisibleR * dbo.AOCVisibleRange(@AOCrange)
+
+    update #grid
+    set VisibleRange = @VisibleR
+    where ColID = @Col
+      and RowID = @Row
+
+    set @Row =
+    (
+      select min(RowID)from #grid where RowID > @Row and ColID = @Col
+    )
+  end
+  set @Col =
+  (
+    select min(ColID)from #grid where ColID > @Col
+  )
+end
+
+select max(VisibleRange)from #grid
+
 
 
 go
 drop function if exists dbo.AOCSepString
+drop function if exists dbo.AOCVisibleRange
+drop type if exists AOCrange
