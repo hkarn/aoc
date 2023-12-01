@@ -28,6 +28,8 @@ select sum(n) from (
 ) t(n)
 
 --AOC 2023. Day 1, part 2
+--first or last letter can be shared
+--this does not destroy adjacent number words and does not change the order
 ;with replaced as ( 
 select txt = 
 	replace(
