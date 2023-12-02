@@ -80,7 +80,11 @@ insert into #GameSets (
 	,SetTxt
 )
 select GameID
-	  ,SetTxt = trim(value)
+	  ,SetTxt = trim(
+				replace(
+					replace(value,char(13),'')
+				,char(10),'')
+			)
 from games
 cross apply string_split([Sets], ';')
 
@@ -88,8 +92,8 @@ cross apply string_split([Sets], ';')
 select 
 	 GameID		= GameID
 	,SetID		= SetID
-	,CubeColor	= trim(replace(replace([dbo].[tmp_fn_AOC23RemoveChars](value,'%[0-9]%'),char(13),''),char(10),''))
-	,Number		= cast(trim(replace(replace([dbo].[tmp_fn_AOC23RemoveChars](value,'%[A-Z]%'),char(13),''),char(10),'')) as int)
+	,CubeColor	= trim([dbo].[tmp_fn_AOC23RemoveChars](value,'%[0-9]%'))
+	,Number		= cast(trim([dbo].[tmp_fn_AOC23RemoveChars](value,'%[A-Z]%')) as int)
 from #GameSets
 cross apply string_split([SetTxt], ',')
 )
@@ -119,8 +123,8 @@ select [Sum] = sum(GameID) from (
 --AOC 2023. Day 2, part 2
 ;with reqCubes as (
 select distinct
-	 GameID						= g.GameID
-	,CubeTypeID					= c.CubeTypeID
+	 GameID					= g.GameID
+	,CubeTypeID				= c.CubeTypeID
 	,requiredNum				= max(r.Number) over (partition by g.GameID, c.CubeTypeID) 
 	from #GameSets g
 	inner join #SetCubeTypeRelation r on r.SetID = g.SetID
@@ -128,14 +132,14 @@ select distinct
 )
 ,reqCubesZeroCubes as (
 select	 GameID						= GameID
-		,CubeTypeID					= CubeTypeID
+		,CubeTypeID				= CubeTypeID
 		,requiredNum				= requiredNum
 		,multiplyByZero				= iif(count(CubeTypeID) over (partition by GameID) = 3,0 ,1)
 from reqCubes
 )
 ,gamePower as (
 select	 GameID						= GameID
-		,gamePower					= exp(sum(log(requiredNum)))
+	,gamePower					= exp(sum(log(requiredNum)))
 from reqCubesZeroCubes
 where multiplyByZero = 0
 group by GameID)
