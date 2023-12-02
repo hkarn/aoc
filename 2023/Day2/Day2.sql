@@ -3,7 +3,7 @@ returns nvarchar(1000)
 as
 begin
     while patindex(@pattern, @txt) > 0
-        set @txt = Stuff(@txt, patindex(@pattern, @txt), 1, '')
+        set @txt = stuff(@txt, patindex(@pattern, @txt), 1, '')
     return @txt
 end
 go
@@ -55,7 +55,19 @@ insert into #CubeTypes (Color)
 select  distinct
 	Color = value
 	from #input
-	cross apply string_split(trim(replace(replace(replace(replace(translate(txt,'123456789:;,', '000000000000'), '0', ''), 'Game   ',''),char(10),''),char(13),'')), ' ')
+	cross apply string_split(
+		trim(
+			replace(
+				replace(
+					replace(
+						replace(
+							translate(txt,'123456789:;,', '000000000000')
+						, '0', '')
+					, 'Game   ','')
+				,char(10),'')
+			,char(13),'')
+		)
+	, ' ')
 where replace(value, ' ', '') <> ''
 
 ;with games as (
