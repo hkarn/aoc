@@ -129,4 +129,5 @@ where multiplyByZero = 0
 group by GameID)
 
 select [Sum2] = sum(gamePower) from gamePower
+
 drop function if exists [dbo].[tmp_fn_AOC23RemoveChars]
