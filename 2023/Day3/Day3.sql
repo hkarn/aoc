@@ -117,91 +117,103 @@ inner join #grid g2 on g2.x between g1.x-1 and g1.x+1
 				   and g2.y between g1.y-1 and g1.y+1
 where g1.symbol = 'x')
 
---Day 3, part 2 ---TODO: NOT SOLVED
+--Day 3, part 2
 --ETL
 
---truncate table #input
+truncate table #input
 
---insert into #input (txt)
---select txt = replace(
---				replace(
---						replace(txt, N'.', N'_') 
---				,char(10), '')
---			,char(13), '')
---from #input_stage
+insert into #input (txt)
+select txt = replace(
+				replace(
+						replace(txt, N'.', N'_') 
+				,char(10), '')
+			,char(13), '')
+from #input_stage
 
---update #input set txt = replace(txt, ' ', '_') --fixed length, fill blanks
---update #input set txt = [dbo].[tmp_fn_AOC23ReplaceChars](txt,'%[^0-9_*]%','_')
 
---truncate table #grid 
---truncate table #numbers
 
---insert into #numbers (number) select null
+update #input set txt = replace(txt, ' ', '_') --fixed length, fill blanks
+update #input set txt = [dbo].[tmp_fn_AOC23ReplaceChars](txt,'%[^0-9_*]%','_')
 
---set @x = 1
---set @y = 1
---set @row = (select txt from #input where id = @y)
---set @symbol = null
---set @number = null
---delete from @numberID
+truncate table #grid 
+truncate table #numbers
 
---while @row is not null
---begin
---	set @x = 1
---	set @symbol = (select substring(txt,@x,1) from #input where id = @y)
---	while @symbol <> ''
---	begin
---		set @number = null
---		if (select patindex('%[0-9]%',@symbol)) = 1
---		begin
---			if (select patindex('%[0-9]%',substring(@row,@x-1,1))) = 1 --continuing number
---				set @number = (select number from #numbers n inner join #grid g on n.numberid =g.numberid
---										where g.x = @x - 1 and g.y = @y)
---			else
---				begin
---					set @number = (select substring(@row,@x,iif(charindex('_',replace(@row,'*','_'),@x) = 0,len(@row)+1,charindex('_',replace(@row,'*','_'),@x)) -@x))
---					delete from @numberID
---					insert into #numbers (number)  
---					output inserted.numberid into @numberID
---					select number = @number
---				end
---		end
---		insert into #grid (
---				 x
---				,y
---				,symbol
---				,numberid)
---		select	 x			= @x
---				,y			= @y
---				,symbol		= @symbol
---				,numberID	= iif(@number is null, -1, isnull((select top 1 id from @numberID), -1))
---		set @x = @x + 1
---		set @symbol = (select substring(txt,@x,1) from #input where id = @y)
---	end
---set @y = @y + 1
---set @row = (select txt from #input where id = @y)
---end
+insert into #numbers (number) select null
 
-----Answer:
+set @x = 1
+set @y = 1
+set @row = (select txt from #input where id = @y)
+set @symbol = null
+set @number = null
+delete from @numberID
 
---select sum(n) from (
---select n = exp(sum(log(number)))  from (
+while @row is not null
+begin
+	set @x = 1
+	set @symbol = (select substring(txt,@x,1) from #input where id = @y)
+	while @symbol <> ''
+	begin
+		set @number = null
+		if (select patindex('%[0-9]%',@symbol)) = 1
+		begin
+			if (select patindex('%[0-9]%',substring(@row,@x-1,1))) = 1 --continuing number
+				set @number = (select number from #numbers n inner join #grid g on n.numberid =g.numberid
+										where g.x = @x - 1 and g.y = @y)
+			else
+				begin
+					set @number = (select substring(@row,@x,iif(charindex('_',replace(@row,'*','_'),@x) = 0,len(@row)+1,charindex('_',replace(@row,'*','_'),@x)) -@x))
+					delete from @numberID
+					insert into #numbers (number)  
+					output inserted.numberid into @numberID
+					select number = @number
+				end
+		end
+		insert into #grid (
+				 x
+				,y
+				,symbol
+				,numberid)
+		select	 x			= @x
+				,y			= @y
+				,symbol		= @symbol
+				,numberID	= iif(@number is null, -1, isnull((select top 1 id from @numberID), -1))
+		set @x = @x + 1
+		set @symbol = (select substring(txt,@x,1) from #input where id = @y)
+	end
+set @y = @y + 1
+set @row = (select txt from #input where id = @y)
+end
 
---select distinct x2 = g2.x
---			   ,y2 = g2.y
---			   ,symbol = g2.symbol
---			   ,numberid = g2.numberid
---			   ,x1 = g1.x
---			   ,y1 = g1.y
---,a = count((g2.x*10000)+g2.y) over (partition by g1.x,g1.y)
---from #grid g1 
---inner join #grid g2 on g2.x between g1.x-1 and g1.x+1
---				   and g2.y between g1.y-1 and g1.y+1
---where g1.symbol = '*' and g2.symbol <> '_'
---) t
---inner join #numbers n on n.numberid = t.numberid
---where a = 3
---group by x1, y1
---)t
+--Answer part 2:
+
+
+select sum(n) from (
+select n = exp(sum(log(number)))  from (
+
+select distinct numberid = g2.numberid
+				,x = g1.x
+				,y = g1.y
+			  
+from #grid g1 
+inner join #grid g2 on g2.x between g1.x-1 and g1.x+1
+				   and g2.y between g1.y-1 and g1.y+1
+where g1.symbol = '*' and g2.symbol <> '_'
+and exists (select 1 from (select x1 = g1.x, y1 = g1.y
+				from #grid g1 
+				inner join #grid g2 on g2.x between g1.x-1 and g1.x+1
+								   and g2.y between g1.y-1 and g1.y+1
+				where g1.symbol = '*' and g2.symbol <> '_'
+				group by g1.x, g1.y
+				having count(distinct g2.numberid) = 3)
+			 f where f.x1= g1.x  and f.y1 = g1.y)
+		
+) t
+inner join #numbers n on n.numberid = t.numberid
+group by x,y
+)t
+
+
+
+
 
 drop function if exists [dbo].[tmp_fn_AOC23ReplaceChars]
