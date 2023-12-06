@@ -36,6 +36,7 @@ create table #almanac (
 	, tgtID int not null
 	, srcID int not null
 	, r int not null
+	, offset as ( tgtID - srcID )
 	primary key(tgtID,srcType,tgtType))
 
 insert into #input (txt)
@@ -86,4 +87,57 @@ begin
 	set @pointer = (select min(id) from #input where id > @pointer) 
 end
 
-select * from  #almanac
+drop table if exists #numbers
+
+;with cte as (
+	select n = 1
+	union all
+	select n = n + 1 from cte
+	where n < 1000
+	)
+select n 
+into #numbers from cte
+option (maxrecursion 1000)
+
+drop table if exists #fullMap 
+create table #fullMap 
+	( srcT nvarchar(20) not null
+	, tgtT nvarchar(20) not null
+	, tgtN int not null
+	, srcN int not null)
+
+insert into #fullMap
+
+select srcT	= srcType
+	  ,tgtT	= tgtType
+	  ,srcN	= n.n
+	  ,tgtN = isnull(n.n + a.offset, n.n)
+	from #numbers n
+full join #almanac a on n.n >= a.srcID and n.n < (a.srcID + a.r)
+where a.srcType is not null
+
+
+select *
+	  from #seeds s
+full join #almanac a on s.seed >= a.srcID and s.seed <= a.srcID + a.r and a.srcType = 'seed'
+where isnull(a.srcType, 'seed') = 'seed'
+
+select * from #seeds
+inner join #almanac a2 on a1.tgtType = a2.srcType
+inner join #almanac a3 on a2.tgtType = a3.srcType
+inner join #almanac a4 on a3.tgtType = a4.srcType
+inner join #almanac a5 on a4.tgtType = a5.srcType
+inner join #almanac a6 on a5.tgtType = a6.srcType
+inner join #almanac a7 on a6.tgtType = a7.srcType
+where a1.srcType = 'seed'
+
+
+
+select * from  #almanac a1
+inner join #almanac a2 on a1.tgtType = a2.srcType
+inner join #almanac a3 on a2.tgtType = a3.srcType
+inner join #almanac a4 on a3.tgtType = a4.srcType
+inner join #almanac a5 on a4.tgtType = a5.srcType
+inner join #almanac a6 on a5.tgtType = a6.srcType
+inner join #almanac a7 on a6.tgtType = a7.srcType
+where a1.srcType = 'seed'
