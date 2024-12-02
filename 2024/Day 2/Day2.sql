@@ -55,7 +55,7 @@ end catch
 	from LastVal
 	where LastVal is not null
 )
-select Day2_Answer1 = count(1/0) 
+select Day2_Answer1 = count(*) 
 from (
 	select ReportID 
 	from a 
@@ -64,3 +64,45 @@ from (
 	having count(*) = 1
 	) t
 
+--Answer 2
+--Same thing, but test excluding steps.
+--We can't just count fails because the chains will fail differently with one erronius step eliminated
+declare @TestLevelID int = 0 --so it starts with no elimination
+
+drop table if exists #ValidatedReports
+select distinct ReportID
+			  , IsValid = 0 
+into #ValidatedReports
+from #Reports
+
+while @TestLevelID <= (select max(LevelID) from #Reports)
+begin
+	with LastVal as (
+		select
+			 ReportID	= ReportID
+			,LevelID	= LevelID
+			,Val		= Val
+			,LastVal	= lag(Val) over (partition by ReportID order by LevelID) 
+		from #Reports
+		where LevelID <> @TestLevelID)
+	,a as (select distinct 
+			   ReportID
+			  ,IncDec	= case when LastVal > Val then 'Inc' 
+							   when LastVal < Val then 'Dec'
+							   else 'Eq' end
+			  ,IsValid  = case when abs(LastVal - Val) between 1 and 3 then 1 else 0 end
+		from LastVal
+		where LastVal is not null
+	)
+	update #ValidatedReports set IsValid = 1
+	where ReportID in (
+		select ReportID 
+		from a 
+		where ReportID not in (select ReportID from a where IsValid = 0)
+		group by ReportID 
+		having count(*) = 1
+	)
+set @TestLevelID = @TestLevelID + 1
+end
+
+select Day2_Answer2 = count(*) from #ValidatedReports where IsValid = 1
