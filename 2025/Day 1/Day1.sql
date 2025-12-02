@@ -36,16 +36,51 @@ with positions as (
 		  ,Zeros = 0
 union all
 select Ord = cast(s.ord as int)
-	  ,Dist = case when s.Dir = 'L' then (p.dist - s.dist) % 100
+	  ,Dist = case when s.Dir = 'L' then (100 + (p.dist - s.dist) % 100) % 100
 				   when s.Dir = 'R' then (p.dist + s.dist) % 100
 				end
 	  ,Zeros = p.Zeros + CASE 
-						when ((case when s.Dir = 'L' then (p.dist - s.dist) % 100
+						when ((case when s.Dir = 'L' then (100 + (p.dist - s.dist) % 100) % 100
 				   when s.Dir = 'R' then (p.dist + s.dist) % 100
 				end) + 100) % 100 = 0 then 1 else 0 end
 from positions p
 join #inputClean s on s.ord = p.ord + 1
 
 )
-select top 1 [Password] = Zeros from positions order by ord desc
+select top 1 Zeros from positions order by ord desc
+option (maxrecursion 0);
+
+--Answer 2
+with positions as (
+	select Ord = cast(0 as int)
+		  ,Dist = 50
+		  ,Zeros = 0
+union all
+select Ord = cast(s.ord as int)
+	  ,Dist = d.newDist
+	  ,Zeros = p.Zeros + CASE 
+					when s.Dir = 'L' then 
+						CASE 
+							when s.Dist >= (case when p.dist = 0 then 100 else p.dist end) then
+								((s.Dist - (case when p.dist = 0 then 100 else p.dist end)) / 100) + 1
+							else 
+								0
+						END
+					when s.Dir = 'R' then 
+						CASE 
+							when s.Dist >= (100 - p.dist) then
+								((s.Dist - (100 - p.dist)) / 100) + 1
+							else 
+								0
+						END
+					else 0
+				end
+from positions p
+join #inputClean s on s.ord = p.ord + 1
+cross apply (select NewDist = case when s.Dir = 'L' then (100 + (p.dist - s.dist) % 100) % 100
+				   when s.Dir = 'R' then (p.dist + s.dist) % 100
+				end) d(newDist)
+
+)
+select top 1 Zeros from positions order by ord desc
 option (maxrecursion 0)
