@@ -66,59 +66,61 @@ group by ColID
 select sum(Result) from res
 
 -- Part2 --
---Add digitID--
+-- Columns per digit --
+drop table if exists #DataSplit2
+declare @MaxLen int = (select max(len(txt)) from #input_stage); /*trailing spaces lost on some rows, keep fixed lenght*/
+with cols as (
+select LineID
+	  ,ColID		= g.value
+	  ,Val			= substring(cast(txt as nvarchar(max)), g.value, 1)
+	  ,MaxLineID	= max(LineID) over ()
+from #input_stage
+cross apply generate_series(1, @MaxLen) g)
 
-/* TO DO, spaces need to be preserved as the digits are in columns and 
-123
- 25 
-  5
+select LineID
+	  ,ColID		
+	  ,Val			= case when LineID = MaxLineID then
+							last_value(nullif(Val,'')) ignore nulls over(partition by LineID order by ColID) 
+						else
+							Val 
+						end
+	  ,MaxLineID	
+into #DataSplit2
+from cols;
 
-can be different from
 
-5
-45
-123
 
-*/
-
-drop table if exists #NumbersWDigit
-create table #NumbersWDigit (LineID int not null, ColID int not null, DigitID int not null, Val tinyint not null primary key(DigitID,ColID,LineID))
-
-insert into #NumbersWDigit (LineID,ColID,DigitID,Val)
-select 
-      LineID	 = s.LineID
-    , ColID		 = s.ColID
-    , DigitID    = (max(len(s.Val)) over (partition by s.ColID) - g.value) + 1
-    , Val		 = substring(cast(s.Val as nvarchar(100)), g.value, 1)
-from #Numbers s
-cross apply generate_series(1, cast(len(s.Val) as int)) g;
-
-select * from #NumbersWDigit where colid = 1
-
-with res as (
+with res0 as (
 select  n.ColID
-	   ,DigitID
-	   ,Result = cast(string_agg(n.Val,'') as bigint)
+	   ,Result = cast(replace(rtrim(ltrim(string_agg(n.Val,'') within group (order by LineID) )), ' ','') as bigint)
 	   ,Operator = o.Val
-	   ,n.val
-from #NumbersWDigit n
-inner join #Operators o on o.ColID = n.ColID
-group by n.ColID,DigitID,o.Val
-order by o.ColID,DigitID
+from #DataSplit2 n
+inner join (select ColID, Val from #DataSplit2 where LineID = MaxLineID) o on o.ColID = n.ColID
+where n.LineID <> n.MaxLineID
+group by n.ColID,o.Val
 )
---,res2 as (
-/* + */
+,res1 as (
 select  ColID
+	   ,Result 
+	   ,Operator
+	   ,ProblemGroupID = sum(case when isnull(Result,0)  = 0 then 1 else 0 end) over (order by ColID)
+from res0 n
+)
+,res2 as (
+/* + */
+select  ProblemGroupID
 	   ,Result = sum(Result)
-from res
+from res1
 where Operator = '+'
-group by ColID
+  and Result <> 0
+group by ProblemGroupID
 union all
 /* * */
-select  ColID
+select  ProblemGroupID
 	   ,Result = exp(sum(log(Result * 1e0)))
-from res
+from res1
 where Operator = '*'
-group by ColID
+  and Result <> 0
+group by ProblemGroupID
 )
-select sum(Result) from res
+select sum(Result) from res2
