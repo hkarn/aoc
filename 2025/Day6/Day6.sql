@@ -65,3 +65,60 @@ group by ColID
 )
 select sum(Result) from res
 
+-- Part2 --
+--Add digitID--
+
+/* TO DO, spaces need to be preserved as the digits are in columns and 
+123
+ 25 
+  5
+
+can be different from
+
+5
+45
+123
+
+*/
+
+drop table if exists #NumbersWDigit
+create table #NumbersWDigit (LineID int not null, ColID int not null, DigitID int not null, Val tinyint not null primary key(DigitID,ColID,LineID))
+
+insert into #NumbersWDigit (LineID,ColID,DigitID,Val)
+select 
+      LineID	 = s.LineID
+    , ColID		 = s.ColID
+    , DigitID    = (max(len(s.Val)) over (partition by s.ColID) - g.value) + 1
+    , Val		 = substring(cast(s.Val as nvarchar(100)), g.value, 1)
+from #Numbers s
+cross apply generate_series(1, cast(len(s.Val) as int)) g;
+
+select * from #NumbersWDigit where colid = 1
+
+with res as (
+select  n.ColID
+	   ,DigitID
+	   ,Result = cast(string_agg(n.Val,'') as bigint)
+	   ,Operator = o.Val
+	   ,n.val
+from #NumbersWDigit n
+inner join #Operators o on o.ColID = n.ColID
+group by n.ColID,DigitID,o.Val
+order by o.ColID,DigitID
+)
+--,res2 as (
+/* + */
+select  ColID
+	   ,Result = sum(Result)
+from res
+where Operator = '+'
+group by ColID
+union all
+/* * */
+select  ColID
+	   ,Result = exp(sum(log(Result * 1e0)))
+from res
+where Operator = '*'
+group by ColID
+)
+select sum(Result) from res
