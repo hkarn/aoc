@@ -44,16 +44,17 @@ select Orig_yID = o.yID
 	  ,HasRoll = case when o.Content = '@' then 1 else 0 end
 	  ,NeighbourHasRoll = case when p.Content = '@' then 1 else 0 end
 from #inputClean o
-inner join #inputClean p on (p.yID = o.yID - 1 or p.yID = o.yID + 1 or p.yID = o.yID)
-						and (p.xID = o.xID - 1 or p.xID = o.xID + 1 or p.xID = o.xID)
+inner join #inputClean p on (p.yID >= o.yID - 1 and p.yID <= o.yID + 1)
+						and (p.xID >= o.xID - 1 and p.xID <= o.xID + 1)
 						and not (p.yID = o.yID and p.xID = o.xID)
+where o.Content = '@'
 )
 ,nSum as (
 select yID = Orig_yID
       ,xID = Orig_xID
 	  ,rollSum = sum(NeighbourHasRoll)
 from neighbours
-where HasRoll = 1
+--where HasRoll = 1
 group by Orig_yID,Orig_xID
 )
 select count(*) from nSum
