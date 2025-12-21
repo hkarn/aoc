@@ -59,3 +59,41 @@ group by Orig_yID,Orig_xID
 )
 select count(*) from nSum
 where rollSum < 4
+
+/* PART 2 
+	Iterate over part1 solution and remove rolls until no work can be done
+	*/
+
+declare @RemovedRolls bigint = 0
+	   ,@PrevRollCount bigint = (select count(*) from #inputClean where Content = '@') + 1;
+	
+while @PrevRollCount > (select count(*) from #inputClean where Content = '@')
+begin
+	set @PrevRollCount = (select count(*) from #inputClean where Content = '@')
+
+	with neighbours as (
+	select Orig_yID = o.yID
+		  ,Orig_xID = o.xID
+		  ,NeighbourHasRoll = case when p.Content = '@' then 1 else 0 end
+	from #inputClean o
+	inner join #inputClean p on (p.yID >= o.yID - 1 and p.yID <= o.yID + 1)
+							and (p.xID >= o.xID - 1 and p.xID <= o.xID + 1)
+							and not (p.yID = o.yID and p.xID = o.xID)
+	where o.Content = '@'
+	)
+	,nSum as (
+	select yID = Orig_yID
+		  ,xID = Orig_xID
+		  ,rollSum = sum(NeighbourHasRoll)
+	from neighbours
+	group by Orig_yID,Orig_xID
+	)
+	update i set Content = '.' 
+	from #inputClean i 
+	inner join nSum on nSum.yID = i.yID and nSum.xID = i.xID
+	where rollSum < 4;
+
+	set @RemovedRolls = @RemovedRolls + rowcount_big();
+end
+
+select @RemovedRolls;
